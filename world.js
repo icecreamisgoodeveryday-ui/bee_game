@@ -75,6 +75,11 @@ function makeNPC() {
       energy:   25 + Math.random() * 75,
       boredom:  Math.random() * 88,
     },
+    beebucks: 0,
+    job: null,
+    farmerState: 'idle',
+    actionTimer: 0,
+    _ftarget: null,
   };
 }
 
@@ -88,6 +93,7 @@ function pickTarget(b) {
 
 function updateNPCs(dt, t) {
   npcs.forEach(b => {
+    if (b.job) return; // job systems handle their own movement
     const dx = b.tx - b.x;
     const dy = b.ty - b.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -126,6 +132,7 @@ function updateNPCs(dt, t) {
 
 // ── World scene entry point ────────────────────────────────────────────────
 function startWorld() {
+  canvas.addEventListener('pointerdown', handleWorldClick);
   let last = null;
 
   function loop(ts) {
@@ -134,17 +141,29 @@ function startWorld() {
     last = ts;
 
     drawDirt();
+    updateFarms(dt);
+    drawFarms();
     updateNPCs(dt, t);
 
     npcs.forEach(b => {
+      if (b.job === 'farmer') updateFarmer(b, dt);
       const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
       if (speed > 1) b._angle = Math.atan2(b.vy, b.vx) + Math.PI / 2;
       drawBeeTop(b.x, b.y, b._angle || 0, t);
     });
 
-    const hovered = getHoveredNpc(npcs);
-    if (hovered) drawHoverPanel(hovered);
-    canvas.style.cursor = hovered ? 'pointer' : 'default';
+    drawBuildButton();
+    drawJobUI();
+
+    // Hover tooltip (suppress in build mode or on selected bee to avoid overlap)
+    const hovered = buildMode ? null : getHoveredNpc(npcs);
+    if (hovered && hovered !== selectedBee) drawHoverPanel(hovered);
+
+    if (buildMode) {
+      canvas.style.cursor = 'crosshair';
+    } else {
+      canvas.style.cursor = (hovered || selectedBee) ? 'pointer' : 'default';
+    }
 
     requestAnimationFrame(loop);
   }

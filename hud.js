@@ -68,10 +68,11 @@ function drawBar(x, y, label, value, badWhenHigh) {
 
 // ── Hover panel ────────────────────────────────────────────────────────────
 const PW = 120;
-const PH = 96;
+const PH = 108;
+
+const JOB_LABELS = { farmer: 'Farmer', null: 'Jobless' };
 
 function drawHoverPanel(npc) {
-  // Position: prefer right-above the bee, clamp to canvas
   let px = npc.x + 16;
   let py = npc.y - PH - 10;
   if (px + PW > W - 2)  px = npc.x - PW - 16;
@@ -79,39 +80,46 @@ function drawHoverPanel(npc) {
   if (py < 2)           py = npc.y + 16;
   if (py + PH > H - 2)  py = H - PH - 2;
 
-  // Background
   ctx.fillStyle = 'rgba(8,5,2,0.90)';
   roundRect(px, py, PW, PH, 5);
   ctx.fill();
-
   ctx.strokeStyle = 'rgba(245,194,0,0.55)';
   ctx.lineWidth = 1;
   roundRect(px, py, PW, PH, 5);
   ctx.stroke();
 
   const x = px + 5;
+  ctx.textAlign = 'left';
 
   // Name
   ctx.fillStyle = '#f5c200';
   ctx.font = 'bold 9px monospace';
-  ctx.textAlign = 'left';
   ctx.fillText(npc.name, x, py + 12);
+
+  // Job + beebucks on same row
+  const jobLabel = JOB_LABELS[npc.job] || (npc.job ? npc.job.charAt(0).toUpperCase() + npc.job.slice(1) : 'Jobless');
+  ctx.font = '7px monospace';
+  ctx.fillStyle = npc.job ? '#8bc34a' : '#888';
+  ctx.fillText(jobLabel, x, py + 22);
+  ctx.fillStyle = '#f5c200';
+  ctx.textAlign = 'right';
+  ctx.fillText(`$${Math.floor(npc.beebucks)}`, px + PW - 5, py + 22);
+  ctx.textAlign = 'left';
 
   // Emotion
   const emotion = getEmotion(npc);
   ctx.fillStyle = '#c8b890';
   ctx.font = '7px monospace';
-  ctx.fillText(emotion, x, py + 22);
+  ctx.fillText(emotion, x, py + 32);
 
-  // Health bar (wider, prominent)
+  // Health bar
   ctx.fillStyle = '#e06060';
-  ctx.font = '7px monospace';
-  ctx.fillText('Health', x, py + 32);
+  ctx.fillText('Health', x, py + 42);
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(x + 40, py + 27, 68, 6);
+  ctx.fillRect(x + 40, py + 37, 68, 6);
   const hpHue = npc.health > 55 ? 120 : npc.health > 28 ? 40 : 0;
   ctx.fillStyle = `hsl(${hpHue},72%,44%)`;
-  ctx.fillRect(x + 40, py + 27, 68 * (npc.health / 100), 6);
+  ctx.fillRect(x + 40, py + 37, 68 * (npc.health / 100), 6);
 
   // Need bars
   const bars = [
@@ -123,6 +131,6 @@ function drawHoverPanel(npc) {
   ];
 
   bars.forEach((bar, i) => {
-    drawBar(x, py + 40 + i * 11, bar.label, npc.needs[bar.key], bar.bad);
+    drawBar(x, py + 50 + i * 11, bar.label, npc.needs[bar.key], bar.bad);
   });
 }
