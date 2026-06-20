@@ -47,9 +47,10 @@ function drawGround() {
   ctx.fillRect(0, H - 8, W, 8);
 }
 
+let titleRaf = null;
 let started = false;
 
-function loop(ts) {
+function titleLoop(ts) {
   const t = ts / 1000;
 
   drawSky(t);
@@ -70,10 +71,17 @@ function loop(ts) {
   drawBee(W / 2, 165, 1.3, t);
   drawPrompt(t);
 
-  requestAnimationFrame(loop);
+  titleRaf = requestAnimationFrame(titleLoop);
 }
 
-window.addEventListener('keydown', () => { if (!started) { started = true; /* TODO: start game */ } });
-window.addEventListener('pointerdown', () => { if (!started) { started = true; } });
+function onTitleInput() {
+  if (started) return;
+  started = true;
+  cancelAnimationFrame(titleRaf);
+  startWorld();
+}
 
-requestAnimationFrame(loop);
+window.addEventListener('keydown', onTitleInput);
+window.addEventListener('pointerdown', onTitleInput);
+
+titleRaf = requestAnimationFrame(titleLoop);

@@ -82,3 +82,69 @@ function drawBee(x, y, scale, t) {
 
   ctx.restore();
 }
+
+// Top-down bee for the world view. angle = direction of travel (radians, 0 = east).
+// Sprite faces local -y (north), so rotate by atan2(vy,vx) + PI/2 before calling.
+function drawBeeTop(x, y, angle, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  const flap = Math.abs(Math.sin(t * 14)) * 0.35;
+
+  // Drop shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(1.5, 2, 6, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Left wing — pivots at attachment point on body side
+  ctx.save();
+  ctx.translate(-5, -1);
+  ctx.rotate(-flap - 0.15);
+  ctx.fillStyle = 'rgba(200,230,255,0.62)';
+  ctx.beginPath();
+  ctx.ellipse(-5, -1, 4, 9, -0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Right wing
+  ctx.save();
+  ctx.translate(5, -1);
+  ctx.rotate(flap + 0.15);
+  ctx.fillStyle = 'rgba(200,230,255,0.62)';
+  ctx.beginPath();
+  ctx.ellipse(5, -1, 4, 9, 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Abdomen (body ellipse, yellow base)
+  ctx.fillStyle = '#f5c200';
+  ctx.beginPath();
+  ctx.ellipse(0, 3, 5, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stripes clipped to abdomen
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 3, 5, 9, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = '#1a1a1a';
+  [-1, 3, 7].forEach(yy => ctx.fillRect(-6, yy, 12, 2.5));
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = '#2a1800';
+  ctx.beginPath();
+  ctx.arc(0, -7, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye glints
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.beginPath();
+  ctx.arc(-1.5, -7.5, 1.1, 0, Math.PI * 2);
+  ctx.arc(1.5, -7.5, 1.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
