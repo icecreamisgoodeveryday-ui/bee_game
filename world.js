@@ -35,6 +35,24 @@ function drawDirt() {
 }
 
 // ── NPC bees ───────────────────────────────────────────────────────────────
+const BEE_NAMES = [
+  'Phoebee', 'Beeyonce', 'Buzzer', 'Bee-atrice', 'Abee Lincoln',
+  'Bee-njamin', 'Beenadette', 'Waxley', 'Pollena', 'Stingston',
+  'Nectar Cage', 'Bee-ll Murray', 'Beevis', 'Droney', 'Hivebert',
+  'Fuzz Aldrin', 'Comb Vader', 'Bee-toven', 'Lady Buzzaga', 'Waggle',
+  'Bumblee', 'Stingerella', 'Buzzwick', 'Honeycomb', 'Bee-bop',
+  'Buzz Killington', 'Pollenator', 'Queen Bee-atrix', 'Sir Stings-a-Lot',
+];
+
+const _usedNames = new Set();
+function pickName() {
+  const unused = BEE_NAMES.filter(n => !_usedNames.has(n));
+  const pool = unused.length > 0 ? unused : BEE_NAMES;
+  const name = pool[Math.floor(Math.random() * pool.length)];
+  _usedNames.add(name);
+  return name;
+}
+
 const MARGIN = 24;
 
 function makeNPC() {
@@ -46,9 +64,17 @@ function makeNPC() {
     tx: 0,
     ty: 0,
     speed: 22 + Math.random() * 22,
-    // wander jitter accumulator
     jx: 0,
     jy: 0,
+    name: pickName(),
+    health: 80 + Math.random() * 20,
+    needs: {
+      hunger:   35 + Math.random() * 65,
+      thirst:   30 + Math.random() * 70,
+      bathroom: Math.random() * 90,
+      energy:   25 + Math.random() * 75,
+      boredom:  Math.random() * 88,
+    },
   };
 }
 
@@ -112,10 +138,13 @@ function startWorld() {
 
     npcs.forEach(b => {
       const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-      // Only rotate when actually moving; hold last angle otherwise
       if (speed > 1) b._angle = Math.atan2(b.vy, b.vx) + Math.PI / 2;
       drawBeeTop(b.x, b.y, b._angle || 0, t);
     });
+
+    const hovered = getHoveredNpc(npcs);
+    if (hovered) drawHoverPanel(hovered);
+    canvas.style.cursor = hovered ? 'pointer' : 'default';
 
     requestAnimationFrame(loop);
   }
