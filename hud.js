@@ -70,7 +70,7 @@ function drawBar(x, y, label, value, badWhenHigh) {
 const PW = 120;
 const PH = 108;
 
-const JOB_LABELS = { farmer: 'Farmer', null: 'Jobless' };
+const JOB_LABELS = { farmer: 'Farmer', builder: 'Builder', null: 'Jobless' };
 
 function drawHoverPanel(npc) {
   let px = npc.x + 16;

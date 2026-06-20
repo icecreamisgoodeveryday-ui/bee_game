@@ -81,6 +81,9 @@ function makeNPC() {
     farmerState: 'idle',
     actionTimer: 0,
     _ftarget: null,
+    builderState: 'idle',
+    builderTarget: null,
+    buildTimer: 0,
   };
 }
 
@@ -170,6 +173,10 @@ function updateNPCs(dt, t) {
 
 let playerBucks = 1000;
 
+const FARMER_PAY_INTERVAL = 900; // 15 minutes
+const FARMER_PAY = 200;
+let farmerPayTimer = 0;
+
 function drawBudget() {
   const label = `BUDGET: $${playerBucks}`;
   ctx.font = 'bold 8px monospace';
@@ -200,23 +207,33 @@ function startWorld() {
     last = ts;
 
     drawDirt();
+    // Farmer payday every 15 minutes
+    farmerPayTimer += dt;
+    if (farmerPayTimer >= FARMER_PAY_INTERVAL) {
+      farmerPayTimer -= FARMER_PAY_INTERVAL;
+      npcs.forEach(b => { if (b.job === 'farmer') b.beebucks += FARMER_PAY; });
+    }
+
     updateFarms(dt);
     drawFarms();
+    drawBuildSites(t);
     if (buildMode) {
       const fx = Math.max(2, Math.min(W - FARM_W - BIN_W - BIN_GAP - 4, mouse.x - FARM_W / 2));
       const fy = Math.max(2, Math.min(H - FARM_H - 2, mouse.y - FARM_H / 2));
-      drawFarmGhost(fx, fy, !farmOverlaps(fx, fy));
+      drawFarmGhost(fx, fy, !farmOverlaps(fx, fy) && farmCount() < FARM_LIMIT);
     }
     updateNPCs(dt, t);
 
     npcs.forEach(b => {
-      if (b.job === 'farmer') updateFarmer(b, dt);
+      if (b.job === 'farmer')  updateFarmer(b, dt);
+      if (b.job === 'builder') updateBuilder(b, dt);
       const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
       if (speed > 1) b._angle = Math.atan2(b.vy, b.vx) + Math.PI / 2;
       drawBeeTop(b.x, b.y, b._angle || 0, t);
     });
 
     drawBuildButton();
+    drawBuildMenu();
     drawBudget();
     drawJobUI();
 
