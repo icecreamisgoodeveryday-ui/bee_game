@@ -77,6 +77,7 @@ function makeNPC() {
     },
     beebucks: 100,
     job: null,
+    assignedFarm: null,
     farmerState: 'idle',
     actionTimer: 0,
     _ftarget: null,
@@ -164,6 +165,11 @@ function startWorld() {
     drawDirt();
     updateFarms(dt);
     drawFarms();
+    if (buildMode) {
+      const fx = Math.max(2, Math.min(W - FARM_W - BIN_W - BIN_GAP - 4, mouse.x - FARM_W / 2));
+      const fy = Math.max(2, Math.min(H - FARM_H - 2, mouse.y - FARM_H / 2));
+      drawFarmGhost(fx, fy, !farmOverlaps(fx, fy));
+    }
     updateNPCs(dt, t);
 
     npcs.forEach(b => {

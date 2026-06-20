@@ -1,19 +1,32 @@
 let selectedBee = null;
 let showHireMenu = false;
 let buildMode = false;
+let pickingFarm = false;
+let beeToAssign = null;
 
 const BUILD_BTN = { x: 4, y: H - 17, w: 40, h: 14 };
 
 function enterBuildMode() {
   buildMode = !buildMode;
-  canvas.style.cursor = buildMode ? 'crosshair' : 'default';
+  pickingFarm = false;
+  beeToAssign = null;
   selectedBee = null;
   showHireMenu = false;
+  canvas.style.cursor = buildMode ? 'crosshair' : 'default';
+}
+
+function assignFarmer(bee, farm) {
+  bee.job = 'farmer';
+  bee.assignedFarm = farm;
+  bee.farmerState = 'idle';
+  bee.actionTimer = 0;
+  bee._ftarget = null;
+  bee.tx = bee.x;
+  bee.ty = bee.y;
 }
 
 // ── Farmer AI ──────────────────────────────────────────────────────────────
 function updateFarmer(b, dt) {
-  // Precise movement toward b.tx/b.ty (no wander jitter)
   const dx = b.tx - b.x;
   const dy = b.ty - b.y;
   const d = Math.sqrt(dx * dx + dy * dy);
@@ -30,7 +43,7 @@ function updateFarmer(b, dt) {
 
   if (b.actionTimer > 0) { b.actionTimer -= dt; return; }
 
-  const farm = farms[0];
+  const farm = b.assignedFarm;
   if (!farm) return;
 
   switch (b.farmerState) {
@@ -53,7 +66,6 @@ function updateFarmer(b, dt) {
         b.tx = p.x; b.ty = p.y;
         break;
       }
-      // Nothing to do — loiter near farm
       b.tx = farm.x + FARM_W / 2 + (Math.random() - 0.5) * 24;
       b.ty = farm.y + FARM_H + 12 + Math.random() * 10;
       b.actionTimer = 1.5;
@@ -125,6 +137,41 @@ function drawBuildButton() {
 }
 
 function drawJobUI() {
+  // Farm picking mode: highlight farms and show instruction
+  if (pickingFarm) {
+    const iw = 160, ih = 14;
+    const ix = W / 2 - iw / 2, iy = 4;
+    ctx.fillStyle = 'rgba(10,7,0,0.9)';
+    roundRect(ix, iy, iw, ih, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#f5c200';
+    ctx.lineWidth = 1;
+    roundRect(ix, iy, iw, ih, 3);
+    ctx.stroke();
+    ctx.fillStyle = '#f5c200';
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Click a farm to assign  |  ESC to cancel', W / 2, iy + 9.5);
+
+    farms.forEach((f, i) => {
+      ctx.strokeStyle = '#f5c200';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]);
+      ctx.strokeRect(f.x - 2, f.y - 2, FARM_W + 4, FARM_H + 4);
+      ctx.setLineDash([]);
+
+      const bx = f.x + FARM_W / 2, by = f.y + FARM_H / 2;
+      ctx.fillStyle = '#f5c200';
+      roundRect(bx - 8, by - 8, 16, 16, 4);
+      ctx.fill();
+      ctx.fillStyle = '#1a1000';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(i + 1, bx, by + 4);
+    });
+    return;
+  }
+
   if (!selectedBee) return;
 
   // Dashed selection ring
@@ -137,7 +184,7 @@ function drawJobUI() {
   ctx.stroke();
   ctx.restore();
 
-  if (selectedBee.job) return; // already employed, no hire
+  if (selectedBee.job) return;
 
   if (!showHireMenu) {
     const r = hireButtonRect(selectedBee);
@@ -169,6 +216,18 @@ function drawJobUI() {
   }
 }
 
+// ── ESC cancels build/pick modes ───────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    buildMode = false;
+    pickingFarm = false;
+    beeToAssign = null;
+    selectedBee = null;
+    showHireMenu = false;
+    canvas.style.cursor = 'default';
+  }
+});
+
 // ── Canvas click handler (attached in startWorld) ──────────────────────────
 function handleWorldClick(e) {
   const rect = canvas.getBoundingClientRect();
@@ -178,25 +237,39 @@ function handleWorldClick(e) {
   if (hitRect(cx, cy, BUILD_BTN)) { enterBuildMode(); return; }
 
   if (buildMode) {
-    let fx = Math.max(2, Math.min(W - FARM_W - BIN_W - 10, cx - FARM_W / 2));
-    let fy = Math.max(2, Math.min(H - FARM_H - 2, cy - FARM_H / 2));
-    farms.push(makeFarm(fx, fy));
-    buildMode = false;
-    canvas.style.cursor = 'default';
+    const fx = Math.max(2, Math.min(W - FARM_W - BIN_W - BIN_GAP - 4, cx - FARM_W / 2));
+    const fy = Math.max(2, Math.min(H - FARM_H - 2, cy - FARM_H / 2));
+    if (!farmOverlaps(fx, fy)) {
+      farms.push(makeFarm(fx, fy));
+      buildMode = false;
+      canvas.style.cursor = 'default';
+    }
+    // Stay in build mode if placement would overlap
+    return;
+  }
+
+  if (pickingFarm) {
+    const farm = farmAtPoint(cx, cy);
+    if (farm) assignFarmer(beeToAssign, farm);
+    pickingFarm = false;
+    beeToAssign = null;
     return;
   }
 
   if (selectedBee && showHireMenu) {
     for (const btn of jobButtonRects(selectedBee)) {
-      if (hitRect(cx, cy, btn)) {
-        selectedBee.job = btn.job;
-        selectedBee.farmerState = 'idle';
-        selectedBee.actionTimer = 0;
-        selectedBee._ftarget = null;
-        selectedBee.tx = selectedBee.x;
-        selectedBee.ty = selectedBee.y;
+      if (hitRect(cx, cy, btn) && btn.job === 'farmer') {
+        if (farms.length === 0) {
+          // no farm yet — ignore
+        } else if (farms.length === 1) {
+          assignFarmer(selectedBee, farms[0]);
+          selectedBee = null;
+        } else {
+          beeToAssign = selectedBee;
+          pickingFarm = true;
+          selectedBee = null;
+        }
         showHireMenu = false;
-        selectedBee = null;
         return;
       }
     }
@@ -209,7 +282,6 @@ function handleWorldClick(e) {
     return;
   }
 
-  // Click a bee to select/deselect
   for (const b of npcs) {
     if (Math.hypot(b.x - cx, b.y - cy) < 14) {
       selectedBee = selectedBee === b ? null : b;
