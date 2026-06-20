@@ -88,8 +88,14 @@ const npcs = Array.from({ length: 5 }, makeNPC);
 npcs.forEach(pickTarget);
 
 function pickTarget(b) {
-  b.tx = MARGIN + Math.random() * (W - MARGIN * 2);
-  b.ty = MARGIN + Math.random() * (H - MARGIN * 2);
+  let tx, ty, tries = 0;
+  do {
+    tx = MARGIN + Math.random() * (W - MARGIN * 2);
+    ty = MARGIN + Math.random() * (H - MARGIN * 2);
+    tries++;
+  } while (isBlockedByFarm(tx, ty, 10) && tries < 15);
+  b.tx = tx;
+  b.ty = ty;
 }
 
 function updateNPCs(dt, t) {
@@ -122,6 +128,37 @@ function updateNPCs(dt, t) {
 
     b.x += b.vx * dt;
     b.y += b.vy * dt;
+
+    // Farm avoidance
+    farms.forEach(f => {
+      const fw = FARM_W + BIN_GAP + BIN_W;
+      const inside = b.x >= f.x && b.x <= f.x + fw && b.y >= f.y && b.y <= f.y + FARM_H;
+      if (inside) {
+        // Eject to nearest edge
+        const toLeft  = b.x - f.x;
+        const toRight = f.x + fw - b.x;
+        const toTop   = b.y - f.y;
+        const toBot   = f.y + FARM_H - b.y;
+        const m = Math.min(toLeft, toRight, toTop, toBot);
+        if (m === toLeft)  { b.x = f.x - 2;          b.vx = -Math.abs(b.vx); }
+        else if (m === toRight) { b.x = f.x + fw + 2; b.vx =  Math.abs(b.vx); }
+        else if (m === toTop)   { b.y = f.y - 2;      b.vy = -Math.abs(b.vy); }
+        else                    { b.y = f.y + FARM_H + 2; b.vy = Math.abs(b.vy); }
+        pickTarget(b);
+      } else {
+        // Repel when close to farm edge
+        const cpx = Math.max(f.x, Math.min(f.x + fw, b.x));
+        const cpy = Math.max(f.y, Math.min(f.y + FARM_H, b.y));
+        const ex = b.x - cpx, ey = b.y - cpy;
+        const dist = Math.sqrt(ex * ex + ey * ey);
+        const avoidR = 14;
+        if (dist < avoidR && dist > 0) {
+          const s = (avoidR - dist) / avoidR;
+          b.vx += (ex / dist) * s * 100 * dt;
+          b.vy += (ey / dist) * s * 100 * dt;
+        }
+      }
+    });
 
     // Soft boundary bounce
     if (b.x < MARGIN)       { b.x = MARGIN;       b.vx = Math.abs(b.vx); pickTarget(b); }

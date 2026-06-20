@@ -155,6 +155,16 @@ function drawFarmGhost(x, y, valid) {
   ctx.restore();
 }
 
+// True if point (x,y) is inside any farm's footprint (farm + bin) plus `pad` pixels of padding.
+function isBlockedByFarm(x, y, pad) {
+  pad = pad || 0;
+  return farms.some(f => {
+    const fw = FARM_W + BIN_GAP + BIN_W;
+    return x >= f.x - pad && x <= f.x + fw + pad &&
+           y >= f.y - pad && y <= f.y + FARM_H + pad;
+  });
+}
+
 function freePlot(farm) {
   return farm.crops.find(c => c.stage === 0 && !c.claimed) || null;
 }

@@ -15,6 +15,10 @@ function enterBuildMode() {
   canvas.style.cursor = buildMode ? 'crosshair' : 'default';
 }
 
+function farmHasFarmer(farm) {
+  return npcs.some(b => b.job === 'farmer' && b.assignedFarm === farm);
+}
+
 function assignFarmer(bee, farm) {
   bee.job = 'farmer';
   bee.assignedFarm = farm;
@@ -154,20 +158,27 @@ function drawJobUI() {
     ctx.fillText('Click a farm to assign  |  ESC to cancel', W / 2, iy + 9.5);
 
     farms.forEach((f, i) => {
-      ctx.strokeStyle = '#f5c200';
+      const full = farmHasFarmer(f);
+      ctx.strokeStyle = full ? '#666' : '#f5c200';
       ctx.lineWidth = 2;
       ctx.setLineDash([3, 2]);
       ctx.strokeRect(f.x - 2, f.y - 2, FARM_W + 4, FARM_H + 4);
       ctx.setLineDash([]);
 
+      if (full) {
+        // Dim overlay
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(f.x, f.y, FARM_W, FARM_H);
+      }
+
       const bx = f.x + FARM_W / 2, by = f.y + FARM_H / 2;
-      ctx.fillStyle = '#f5c200';
-      roundRect(bx - 8, by - 8, 16, 16, 4);
+      ctx.fillStyle = full ? '#555' : '#f5c200';
+      roundRect(bx - 14, by - 8, 28, 16, 4);
       ctx.fill();
-      ctx.fillStyle = '#1a1000';
-      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = full ? '#aaa' : '#1a1000';
+      ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(i + 1, bx, by + 4);
+      ctx.fillText(full ? 'FULL' : i + 1, bx, by + 5);
     });
     return;
   }
@@ -250,18 +261,22 @@ function handleWorldClick(e) {
 
   if (pickingFarm) {
     const farm = farmAtPoint(cx, cy);
-    if (farm) assignFarmer(beeToAssign, farm);
-    pickingFarm = false;
-    beeToAssign = null;
+    if (farm && !farmHasFarmer(farm)) {
+      assignFarmer(beeToAssign, farm);
+      pickingFarm = false;
+      beeToAssign = null;
+    }
+    // Clicking a full farm or empty space keeps picker open; ESC to cancel
     return;
   }
 
   if (selectedBee && showHireMenu) {
     for (const btn of jobButtonRects(selectedBee)) {
       if (hitRect(cx, cy, btn) && btn.job === 'farmer') {
-        if (farms.length === 0) {
-          // no farm yet — ignore
-        } else if (farms.length === 1) {
+        const available = farms.filter(f => !farmHasFarmer(f));
+        if (available.length === 0) {
+          // no farm or all full — ignore
+        } else if (available.length === 1 && farms.length === 1) {
           assignFarmer(selectedBee, farms[0]);
           selectedBee = null;
         } else {
