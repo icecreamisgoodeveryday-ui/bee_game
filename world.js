@@ -75,7 +75,7 @@ function makeNPC() {
       energy:   25 + Math.random() * 75,
       boredom:  Math.random() * 88,
     },
-    beebucks: 0,
+    beebucks: 100,
     job: null,
     farmerState: 'idle',
     actionTimer: 0,
@@ -130,6 +130,27 @@ function updateNPCs(dt, t) {
   });
 }
 
+let playerBucks = 1000;
+
+function drawBudget() {
+  const label = `BUDGET: $${playerBucks}`;
+  ctx.font = 'bold 8px monospace';
+  const tw = ctx.measureText(label).width;
+  const bx = W - tw - 10, by = 4, bw = tw + 8, bh = 13;
+
+  ctx.fillStyle = 'rgba(10,7,0,0.85)';
+  roundRect(bx - 2, by, bw, bh, 3);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(245,194,0,0.5)';
+  ctx.lineWidth = 1;
+  roundRect(bx - 2, by, bw, bh, 3);
+  ctx.stroke();
+
+  ctx.fillStyle = '#f5c200';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, bx + 2, by + 9.5);
+}
+
 // ── World scene entry point ────────────────────────────────────────────────
 function startWorld() {
   canvas.addEventListener('pointerdown', handleWorldClick);
@@ -153,6 +174,7 @@ function startWorld() {
     });
 
     drawBuildButton();
+    drawBudget();
     drawJobUI();
 
     // Hover tooltip (suppress in build mode or on selected bee to avoid overlap)
