@@ -35,14 +35,20 @@ function cropWorldPos(farm, crop) {
 function farmOverlaps(fx, fy) {
   const PAD = 8;
   const fw = FARM_W + BIN_GAP + BIN_W;
-  return farms.some(f => {
+  if (farms.some(f => {
     const efw = FARM_W + BIN_GAP + BIN_W;
-    const noOverlap = (fx + fw + PAD < f.x) ||
-                      (fx > f.x + efw + PAD) ||
-                      (fy + FARM_H + PAD < f.y) ||
-                      (fy > f.y + FARM_H + PAD);
-    return !noOverlap;
-  });
+    return !((fx + fw + PAD < f.x) || (fx > f.x + efw + PAD) ||
+             (fy + FARM_H + PAD < f.y) || (fy > f.y + FARM_H + PAD));
+  })) return true;
+  if (typeof bathrooms !== 'undefined' && bathrooms.some(bth =>
+    !(fx + fw + PAD < bth.x || fx > bth.x + BATHROOM_W + PAD ||
+      fy + FARM_H + PAD < bth.y || fy > bth.y + BATHROOM_H + PAD)
+  )) return true;
+  if (typeof housings !== 'undefined' && housings.some(h =>
+    !(fx + fw + PAD < h.x || fx > h.x + HOUSING_W + PAD ||
+      fy + FARM_H + PAD < h.y || fy > h.y + HOUSING_H + PAD)
+  )) return true;
+  return false;
 }
 
 // Returns the farm the point (cx,cy) falls inside, or null.

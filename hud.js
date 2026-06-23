@@ -96,6 +96,30 @@ function drawHoverPanel(npc) {
   ctx.font = 'bold 9px monospace';
   ctx.fillText(npc.name, x, py + 12);
 
+  // Relationship chip (shown when another bee is selected)
+  if (typeof selectedBee !== 'undefined' && selectedBee && selectedBee !== npc &&
+      typeof getRelationship !== 'undefined') {
+    const rel  = getRelationship(selectedBee, npc);
+    const cfg  = (typeof REL_BADGE !== 'undefined') ? REL_BADGE[rel] :
+                 { label: rel === 'friend' ? 'bff' : rel === 'acquaintance' ? 'hey' : '???',
+                   color: rel === 'friend' ? '#8bc34a' : rel === 'acquaintance' ? '#f5c200' : '#888',
+                   bg: 'rgba(10,10,10,0.9)' };
+    ctx.font = 'bold 5px monospace';
+    const tw = ctx.measureText(cfg.label).width;
+    const cw = tw + 6, ch = 9;
+    const chipX = px + PW - cw - 3, chipY = py + 3;
+    ctx.fillStyle = cfg.bg;
+    roundRect(chipX, chipY, cw, ch, 3);
+    ctx.fill();
+    ctx.strokeStyle = cfg.color;
+    ctx.lineWidth = 0.7;
+    roundRect(chipX, chipY, cw, ch, 3);
+    ctx.stroke();
+    ctx.fillStyle = cfg.color;
+    ctx.textAlign = 'center';
+    ctx.fillText(cfg.label, chipX + cw / 2, chipY + 6.5);
+  }
+
   // Job + beebucks on same row
   const jobLabel = JOB_LABELS[npc.job] || (npc.job ? npc.job.charAt(0).toUpperCase() + npc.job.slice(1) : 'Jobless');
   ctx.font = '7px monospace';
@@ -133,4 +157,49 @@ function drawHoverPanel(npc) {
   bars.forEach((bar, i) => {
     drawBar(x, py + 50 + i * 11, bar.label, npc.needs[bar.key], bar.bad);
   });
+}
+
+// ── Star rating ────────────────────────────────────────────────────────────
+function getStarRating() {
+  const total = (typeof farms !== 'undefined' ? farms.length : 0)
+              + (typeof banks !== 'undefined' ? banks.length : 0)
+              + (typeof bathrooms !== 'undefined' ? bathrooms.length : 0)
+              + (typeof housings !== 'undefined' ? housings.length : 0);
+  if (farms.length >= 1 && banks.length >= 1 && bathrooms.length >= 1 && housings.length >= 1) return 3;
+  if (total >= 2) return 2;
+  return 1;
+}
+
+function drawStarRating() {
+  const rating  = getStarRating();
+  const OUTER   = 5.5, INNER = 2.2, SPACING = 14;
+  const bw = 3 * SPACING + 8, bh = 14;
+  const bx = W - bw - 5, by = H - 17;
+
+  ctx.fillStyle = 'rgba(10,7,0,0.85)';
+  roundRect(bx, by, bw, bh, 3);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(245,194,0,0.4)';
+  ctx.lineWidth = 1;
+  roundRect(bx, by, bw, bh, 3);
+  ctx.stroke();
+
+  const cy = by + bh / 2;
+  for (let i = 0; i < 3; i++) {
+    const cx     = bx + 10 + i * SPACING;
+    const filled = i < rating;
+    ctx.beginPath();
+    for (let p = 0; p < 10; p++) {
+      const r = p % 2 === 0 ? OUTER : INNER;
+      const a = -Math.PI / 2 + (p / 10) * Math.PI * 2;
+      if (p === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      else         ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = filled ? '#f5c200' : 'rgba(80,65,20,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = filled ? '#c89000' : '#554530';
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+  }
 }
